@@ -64,6 +64,12 @@ syntax-end -->
 
     <a href="#substr" >SUBSTR</a><br />
 
+    <a href="#trim" >TRIM</a><br />
+
+    <a href="#ltrim" >LTRIM</a><br />
+
+    <a href="#rtrim" >RTRIM</a><br />
+
     <a href="#length" >LENGTH</a><br />
 
     <a href="#regexp_substr" >REGEXP_SUBSTR</a><br />
@@ -78,13 +84,19 @@ syntax-end -->
             
                 <a href="#substr" >SUBSTR</a><br />
             
-                <a href="#length" >LENGTH</a><br />
+                <a href="#trim" >TRIM</a><br />
+            
+                <a href="#ltrim" >LTRIM</a><br />
                     </td><td class="index">
+            
+                <a href="#rtrim" >RTRIM</a><br />
+            
+                <a href="#length" >LENGTH</a><br />
             
                 <a href="#regexp_substr" >REGEXP_SUBSTR</a><br />
+                    </td><td class="index">
             
                 <a href="#regexp_replace" >REGEXP_REPLACE</a><br />
-                    </td><td class="index">
                     </td>
     </tr>
 </table>
@@ -256,6 +268,60 @@ syntax-end -->
 <p>Returns a substring of a string starting at the one-based position. If zero is used, the position is zero-based. If the start index is negative, then the start index is relative to the end of the string. The length is optional and if not supplied, the rest of the string will be returned.</p>
 <p>Example:</p>
 <p class="notranslate">SUBSTR(&#39;[Hello]&#39;, 2, 5)<br />SUBSTR(&#39;Hello World&#39;, -5)</p>
+
+<h3 id="trim" class="notranslate">TRIM</h3>
+<!-- railroad-start -->
+<pre name="bnf" style="display: none">
+TRIM( <a href="index.html#term">stringTerm</a> )
+</pre>
+<div name="railroad">
+<table class="railroad"><tr class="railroad"><td class="d"><code class="c">TRIM ( <a href="index.html#term">stringTerm</a> )</code></td></tr></table>
+</div>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+TRIM( <a href="index.html#term">stringTerm</a> )
+</pre>
+syntax-end -->
+<p>Removes leading and trailing spaces from the input string.</p>
+<p>Example:</p>
+<p class="notranslate">TRIM(&#39; &nbsp;Hello &nbsp;&#39;)</p>
+
+<h3 id="ltrim" class="notranslate">LTRIM</h3>
+<!-- railroad-start -->
+<pre name="bnf" style="display: none">
+LTRIM( <a href="index.html#term">stringTerm</a> )
+</pre>
+<div name="railroad">
+<table class="railroad"><tr class="railroad"><td class="d"><code class="c">LTRIM ( <a href="index.html#term">stringTerm</a> )</code></td></tr></table>
+</div>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+LTRIM( <a href="index.html#term">stringTerm</a> )
+</pre>
+syntax-end -->
+<p>Removes leading spaces from the input string.</p>
+<p>Example:</p>
+<p class="notranslate">LTRIM(&#39; &nbsp;Hello&#39;)</p>
+
+<h3 id="rtrim" class="notranslate">RTRIM</h3>
+<!-- railroad-start -->
+<pre name="bnf" style="display: none">
+RTRIM( <a href="index.html#term">stringTerm</a> )
+</pre>
+<div name="railroad">
+<table class="railroad"><tr class="railroad"><td class="d"><code class="c">RTRIM ( <a href="index.html#term">stringTerm</a> )</code></td></tr></table>
+</div>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+RTRIM( <a href="index.html#term">stringTerm</a> )
+</pre>
+syntax-end -->
+<p>Removes trailing spaces from the input string.</p>
+<p>Example:</p>
+<p class="notranslate">RTRIM(&#39;Hello &nbsp;&nbsp;&#39;)</p>
 
 <h3 id="length" class="notranslate">LENGTH</h3>
 <!-- railroad-start -->
