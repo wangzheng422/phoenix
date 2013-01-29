@@ -77,7 +77,7 @@ syntax-end -->
 
     <a href="#constraint" >Constraint</a><br />
 
-    <a href="#family_options" >Family Options</a><br />
+    <a href="#table_options" >Table Options</a><br />
 
     <a href="#options" >Options</a><br />
 
@@ -149,7 +149,7 @@ syntax-end -->
             
                 <a href="#constraint" >Constraint</a><br />
             
-                <a href="#family_options" >Family Options</a><br />
+                <a href="#table_options" >Table Options</a><br />
             
                 <a href="#options" >Options</a><br />
             
@@ -306,24 +306,24 @@ DELETE FROM TEST;<br />DELETE FROM TEST WHERE ID=123;<br />DELETE FROM TEST WHER
 <!-- railroad-start -->
 <pre name="bnf" style="display: none">
 CREATE { TABLE | VIEW } [IF NOT EXISTS] <a href="index.html#name">tableName</a>
-( <a href="index.html#column">column</a> [,...] [<a href="index.html#constraint">constraint</a>] [ <a href="index.html#family_options">familyOptions</a> [...] ] )
-[<a href="index.html#options">tableOptions</a>] [ SPLIT ON ( <a href="index.html#split_point">splitPoint</a> [,...] ) ]
+( <a href="index.html#column">column</a> [,...] [<a href="index.html#constraint">constraint</a>] )
+[<a href="index.html#table_options">tableOptions</a>] [ SPLIT ON ( <a href="index.html#split_point">splitPoint</a> [,...] ) ]
 </pre>
 <div name="railroad">
-<table class="railroad"><tr class="railroad"><td class="d"><code class="c">CREATE</code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><code class="c">TABLE</code></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">VIEW</code></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">IF NOT EXISTS</code></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><code class="c"><a href="index.html#name">tableName</a></code></td></tr></table><br /><table class="railroad"><tr class="railroad"><td class="d"><code class="c">( <a href="index.html#column">column</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">, ...</code></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c"><a href="index.html#constraint">constraint</a></code></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#family_options">familyOptions</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">...</code></td><td class="le"></td></tr></table></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><code class="c">)</code></td></tr></table><br /><table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c"><a href="index.html#options">tableOptions</a></code></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">SPLIT ON ( <a href="index.html#split_point">splitPoint</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">, ...</code></td><td class="le"></td></tr></table></td><td class="d"><code class="c">)</code></td></tr></table></td><td class="le"></td></tr></table></td></tr></table>
+<table class="railroad"><tr class="railroad"><td class="d"><code class="c">CREATE</code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><code class="c">TABLE</code></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">VIEW</code></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">IF NOT EXISTS</code></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><code class="c"><a href="index.html#name">tableName</a></code></td></tr></table><br /><table class="railroad"><tr class="railroad"><td class="d"><code class="c">( <a href="index.html#column">column</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">, ...</code></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c"><a href="index.html#constraint">constraint</a></code></td><td class="le"></td></tr></table></td><td class="d"><code class="c">)</code></td></tr></table><br /><table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c"><a href="index.html#table_options">tableOptions</a></code></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">SPLIT ON ( <a href="index.html#split_point">splitPoint</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">, ...</code></td><td class="le"></td></tr></table></td><td class="d"><code class="c">)</code></td></tr></table></td><td class="le"></td></tr></table></td></tr></table>
 </div>
 <!-- railroad-end -->
 <!-- syntax-start
 <pre>
 CREATE { TABLE | VIEW } [IF NOT EXISTS] <a href="index.html#name">tableName</a>
-( <a href="index.html#column">column</a> [,...] [<a href="index.html#constraint">constraint</a>] [ <a href="index.html#family_options">familyOptions</a> [...] ] )
-[<a href="index.html#options">tableOptions</a>] [ SPLIT ON ( <a href="index.html#split_point">splitPoint</a> [,...] ) ]
+( <a href="index.html#column">column</a> [,...] [<a href="index.html#constraint">constraint</a>] )
+[<a href="index.html#table_options">tableOptions</a>] [ SPLIT ON ( <a href="index.html#split_point">splitPoint</a> [,...] ) ]
 </pre>
 syntax-end -->
 <p>Creates a new table or view. For the creation of a table, the <code>HBase</code> table and any column families referenced are created if they don&#39;t already exist (using uppercase names unless they are double quoted in which case they are case sensitive). Column families outside of the ones listed are not affected. At create time, an empty key value is added to the first column family of any existing rows. Upserts will also add this empty key value. This is done to improve query performance by having a key value column we can guarantee always being there (minimizing the amount of data that must be projected). Alternately, if a view is created, the <code>HBase</code> table and column families must already exist. No empty key value is added to existing rows and no data mutations are allowed - the view is read-only. Query performance for a view will not be as good as performance for a table. For a table only, <code>HBase</code> table and column configuration options may be passed through as key/value pairs to setup the <code>HBase</code> table as needed.</p>
 <p>Example:</p>
 <p class="notranslate">
-CREATE TABLE my_table ( id BIGINT not null primary key, date DATE not null)<br />CREATE TABLE my_table ( id INTEGER not null primary key, date DATE not null, m.db_utilization DECIMAL, i.db_utilization FAMILY m DATA_BLOCK_ENCODING=&#39;DIFF&#39;)<br />CREATE TABLE prod_metrics ( host char(50) not null, created_date date not null, txn_count bigint CONSTRAINT pk PRIMARY KEY (host, created_date) )<br />CREATE TABLE IF NOT EXISTS my_table ( id char(10) not null primary key, value integer FAMILY DATA_BLOCK_ENCODING=&#39;NONE&#39;,VERSIONS=? ) MAX_FILESIZE=2000000 split on (?, ?, ?)</p>
+CREATE TABLE my_table ( id BIGINT not null primary key, date DATE not null)<br />CREATE TABLE my_table ( id INTEGER not null primary key, date DATE not null, m.db_utilization DECIMAL, i.db_utilization) m.DATA_BLOCK_ENCODING=&#39;DIFF&#39;<br />CREATE TABLE prod_metrics ( host char(50) not null, created_date date not null, txn_count bigint CONSTRAINT pk PRIMARY KEY (host, created_date) )<br />CREATE TABLE IF NOT EXISTS my_table ( id char(10) not null primary key, value integer) DATA_BLOCK_ENCODING=&#39;NONE&#39;,VERSIONS=?,MAX_FILESIZE=2000000 split on (?, ?, ?)</p>
 
 <h3 id="drop" class="notranslate">DROP</h3>
 <!-- railroad-start -->
@@ -347,15 +347,15 @@ DROP TABLE my_schema.my_table<br />DROP VIEW my_view</p>
 <h3 id="alter_table" class="notranslate">ALTER TABLE</h3>
 <!-- railroad-start -->
 <pre name="bnf" style="display: none">
-ALTER TABLE <a href="index.html#name">tableName</a> { { ADD [IF NOT EXISTS] <a href="index.html#column">column</a> [<a href="index.html#family_options">familyOptions</a>] } | { DROP COLUMN [IF EXISTS] [ <a href="index.html#name">familyName</a>. ] <a href="index.html#name">columnName</a> } }
+ALTER TABLE <a href="index.html#name">tableName</a> { { ADD [IF NOT EXISTS] <a href="index.html#column">column</a> [<a href="index.html#options">options</a>] } | { DROP COLUMN [IF EXISTS] [ <a href="index.html#name">familyName</a>. ] <a href="index.html#name">columnName</a> } }
 </pre>
 <div name="railroad">
-<table class="railroad"><tr class="railroad"><td class="d"><code class="c">ALTER TABLE <a href="index.html#name">tableName</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">ADD</code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">IF NOT EXISTS</code></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><code class="c"><a href="index.html#column">column</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c"><a href="index.html#family_options">familyOptions</a></code></td><td class="le"></td></tr></table></td></tr></table></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">DROP COLUMN</code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">IF EXISTS</code></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#name">familyName</a> .</code></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><code class="c"><a href="index.html#name">columnName</a></code></td></tr></table></td><td class="le"></td></tr></table></td></tr></table>
+<table class="railroad"><tr class="railroad"><td class="d"><code class="c">ALTER TABLE <a href="index.html#name">tableName</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">ADD</code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">IF NOT EXISTS</code></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><code class="c"><a href="index.html#column">column</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c"><a href="index.html#options">options</a></code></td><td class="le"></td></tr></table></td></tr></table></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">DROP COLUMN</code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">IF EXISTS</code></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#name">familyName</a> .</code></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><code class="c"><a href="index.html#name">columnName</a></code></td></tr></table></td><td class="le"></td></tr></table></td></tr></table>
 </div>
 <!-- railroad-end -->
 <!-- syntax-start
 <pre>
-ALTER TABLE <a href="index.html#name">tableName</a> { { ADD [IF NOT EXISTS] <a href="index.html#column">column</a> [<a href="index.html#family_options">familyOptions</a>] } | { DROP COLUMN [IF EXISTS] [ <a href="index.html#name">familyName</a>. ] <a href="index.html#name">columnName</a> } }
+ALTER TABLE <a href="index.html#name">tableName</a> { { ADD [IF NOT EXISTS] <a href="index.html#column">column</a> [<a href="index.html#options">options</a>] } | { DROP COLUMN [IF EXISTS] [ <a href="index.html#name">familyName</a>. ] <a href="index.html#name">columnName</a> } }
 </pre>
 syntax-end -->
 <p>Adds or removes a column from an existing table or view. When a column is dropped from a table, the data in that column is deleted as well. <code>PK</code> columns may not be dropped, and only nullable <code>PK</code> columns may be added. For a view, the data is not affected when a column is dropped. Note that creating or dropping columns only affects subsequent queries and data modifications. Snapshot queries that are connected at an earlier timestamp will still use the prior schema that was in place when the data was written.</p>
@@ -396,18 +396,18 @@ syntax-end -->
 <p>Example:</p>
 <p class="notranslate">CONSTRAINT my_pk PRIMARY KEY (host,created_date)</p>
 
-<h3 id="family_options" class="notranslate">Family Options</h3>
+<h3 id="table_options" class="notranslate">Table Options</h3>
 <!-- railroad-start -->
-<table class="railroad"><tr class="railroad"><td class="d"><code class="c">FAMILY</code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c"><a href="index.html#name">familyName</a></code></td><td class="le"></td></tr></table></td><td class="d"><code class="c"><a href="index.html#options">options</a></code></td></tr></table>
+<table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#name">familyName</a> .</code></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><code class="c"><a href="index.html#name">name</a> =</code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><code class="c"><a href="index.html#value">value</a></code></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c"><a href="index.html#bind_parameter">bindParameter</a></code></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">, ...</code></td><td class="le"></td></tr></table></td></tr></table>
 <!-- railroad-end -->
 <!-- syntax-start
 <pre>
-FAMILY [<a href="index.html#name">familyName</a>] <a href="index.html#options">options</a>
+{ [<a href="index.html#name">familyName</a> .] <a href="index.html#name">name</a>= {<a href="index.html#value">value</a> | <a href="index.html#bind_parameter">bindParameter</a>}} [,...]
 </pre>
 syntax-end -->
-<p>Sets an option on an <code>HBase</code> column descriptor by modifying the <code>HBase</code> table metadata. The options apply to the named family or if omitted to all families.</p>
+<p>Sets an option on an <code>HBase</code> table or column by modifying the respective <code>HBase</code> metadata. The option applies to the named family or if omitted to all families if the name references an <code>HColumnDescriptor</code> property. Otherwise, the option applies to the <code>HTableDescriptor</code>.</p>
 <p>Example:</p>
-<p class="notranslate">FAMILY DATA_BLOCK_ENCODING=&#39;NONE&#39;<br />FAMILY d DATA_BLOCK_ENCODING=&#39;NONE&#39;,VERSIONS=?</p>
+<p class="notranslate">DATA_BLOCK_ENCODING=&#39;NONE&#39;,a.VERSIONS=10<br />MAX_FILESIZE=2000000000,MEMSTORE_FLUSHSIZE=80000000</p>
 
 <h3 id="options" class="notranslate">Options</h3>
 <!-- railroad-start -->
@@ -418,7 +418,7 @@ syntax-end -->
 {<a href="index.html#name">name</a>= {<a href="index.html#value">value</a> | <a href="index.html#bind_parameter">bindParameter</a>}} [,...]
 </pre>
 syntax-end -->
-<p>Sets an option on an <code>HBase</code> table or column by modifying the <code>HBase</code> table.</p>
+<p>Sets an option on an <code>HBase</code> column by modifying the <code>HColumnDescriptor</code>.</p>
 <p>Example:</p>
 <p class="notranslate">DATA_BLOCK_ENCODING=&#39;NONE&#39;,VERSIONS=10<br />MAX_FILESIZE=2000000000,MEMSTORE_FLUSHSIZE=80000000</p>
 
