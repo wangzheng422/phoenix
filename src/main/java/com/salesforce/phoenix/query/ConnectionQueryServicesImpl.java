@@ -27,7 +27,8 @@
  ******************************************************************************/
 package com.salesforce.phoenix.query;
 
-import static com.salesforce.phoenix.jdbc.PhoenixDatabaseMetaData.TYPE_TABLE_NAME;
+import static com.salesforce.phoenix.jdbc.PhoenixDatabaseMetaData.*;
+import static com.salesforce.phoenix.util.SchemaUtil.getVarChars;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -36,10 +37,11 @@ import java.util.Map.Entry;
 import java.util.concurrent.*;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -52,6 +54,7 @@ import com.salesforce.phoenix.compile.MutationPlan;
 import com.salesforce.phoenix.coprocessor.*;
 import com.salesforce.phoenix.coprocessor.MetaDataProtocol.MetaDataMutationResult;
 import com.salesforce.phoenix.coprocessor.MetaDataProtocol.MutationCode;
+import com.salesforce.phoenix.exception.*;
 import com.salesforce.phoenix.execute.MutationState;
 import com.salesforce.phoenix.jdbc.PhoenixConnection;
 import com.salesforce.phoenix.jdbc.PhoenixDatabaseMetaData;
@@ -65,9 +68,6 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
     private static final Logger logger = LoggerFactory.getLogger(ConnectionQueryServicesImpl.class);
     private static final int INITIAL_CHILD_SERVICES_CAPACITY = 100;
     private static final int DEFAULT_OUT_OF_ORDER_MUTATIONS_WAIT_TIME_MS = 1000;
-    // Cache the region boundary metadata for this number of seconds.
-    // The only downside of it being out-of-sync is that the parallelization of the scan won't be as balanced as it could be.
-    private static final int REGION_BOUNDARIES_CACHE_TTL_SECS = 60; // TODO: from config
     private final Configuration config;
     private final HConnection connection;
     private final StatsManager statsManager;
@@ -87,10 +87,11 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
         try {
             this.connection = HConnectionManager.createConnection(config);
         } catch (ZooKeeperConnectionException e) {
-            throw new SQLException(e);
+            throw new SQLExceptionInfo.Builder(SQLExceptionCode.CANNOT_ESTABLISH_CONNECTION)
+                .setRootCause(e).build().buildException();
         }
         if (this.connection.isClosed()) { // TODO: why the heck doesn't this throw above?
-            throw new SQLException("Unable to establish connection");
+            throw new SQLExceptionInfo.Builder(SQLExceptionCode.CANNOT_ESTABLISH_CONNECTION).build().buildException();
         }
         // TODO: should we track connection wide memory usage or just org-wide usage?
         // If connection-wide, create a MemoryManager here, otherwise just use the one from the delegate
@@ -102,7 +103,7 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
          * keep a cache of HRegionInfo objects
          */
         tableRegionCache = CacheBuilder.newBuilder().
-            expireAfterAccess(REGION_BOUNDARIES_CACHE_TTL_SECS, TimeUnit.SECONDS)
+            expireAfterAccess(this.getConfig().getLong(QueryServices.REGION_BOUNDARY_CACHE_TTL_MS_ATTRIB,QueryServicesOptions.DEFAULT_REGION_BOUNDARY_CACHE_TTL_MS), TimeUnit.MILLISECONDS)
             .removalListener(new RemovalListener<TableRef, SortedSet<HRegionInfo>>(){
                 @Override
                 public void onRemoval(RemovalNotification<TableRef, SortedSet<HRegionInfo>> notification) {
@@ -126,7 +127,7 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
     @Override
     public HTableInterface getTable(byte[] tableName) throws SQLException {
         try {
-            return new HTable(tableName, connection, getExecutor());
+            return HTableFactoryProvider.getHTableFactory().getTable(tableName, connection, getExecutor());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -149,7 +150,7 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
         try {
             connection.close();
         } catch (IOException e) {
-            throw new SQLException(e);
+            throw new PhoenixIOException(e);
         }
         finally {
             super.close();
@@ -182,7 +183,8 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
         try {
             return tableRegionCache.get(table);
         } catch (ExecutionException e) {
-            throw new SQLException(e);
+            throw new SQLExceptionInfo.Builder(SQLExceptionCode.GET_TABLE_REGIONS_FAIL)
+                .setRootCause(e).build().buildException();
         }
     }
 
@@ -247,7 +249,8 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
                     }
                     latestMetaDataLock.wait(waitTime);
                 } catch (InterruptedException e) {
-                    throw new SQLException(e);
+                    throw new SQLExceptionInfo.Builder(SQLExceptionCode.INTERRUPTED_EXCEPTION)
+                        .setRootCause(e).build().buildException();
                 }
             }
             latestMetaData = metaData;
@@ -375,19 +378,18 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
             }
         }
         // The phoenix jar must be available on HBase classpath
-        Path phoenixJarPath = new Path(QueryConstants.DEFAULT_COPROCESS_PATH);
         try {
-            descriptor.addCoprocessor(ScanRegionObserver.class.getName(), phoenixJarPath, 1, null);
-            descriptor.addCoprocessor(UngroupedAggregateRegionObserver.class.getName(), phoenixJarPath, 1, null);
-            descriptor.addCoprocessor(GroupedAggregateRegionObserver.class.getName(), phoenixJarPath, 1, null);
-            descriptor.addCoprocessor(HashJoiningRegionObserver.class.getName(), phoenixJarPath, 1, null);
+            descriptor.addCoprocessor(ScanRegionObserver.class.getName(), null, 1, null);
+            descriptor.addCoprocessor(UngroupedAggregateRegionObserver.class.getName(), null, 1, null);
+            descriptor.addCoprocessor(GroupedAggregateRegionObserver.class.getName(), null, 1, null);
+            descriptor.addCoprocessor(HashJoiningRegionObserver.class.getName(), null, 1, null);
             // Setup split policy on Phoenix metadata table to ensure that the key values of a Phoenix table
             // stay on the same region.
             if (SchemaUtil.isMetaTable(tableName)) {
-                descriptor.addCoprocessor(MetaDataEndpointImpl.class.getName(), phoenixJarPath, 1, null);
+                descriptor.addCoprocessor(MetaDataEndpointImpl.class.getName(), null, 1, null);
             }
         } catch (IOException e) {
-            throw new SQLException(e);
+            throw new PhoenixIOException(e);
         }
         return descriptor;
     }
@@ -416,10 +418,10 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
                 }
                 admin.enableTable(tableName);
             } catch (org.apache.hadoop.hbase.TableNotFoundException e) {
-                sqlE = new SQLException(e);
+                sqlE = new SQLExceptionInfo.Builder(SQLExceptionCode.TABLE_UNDEFINED).setRootCause(e).build().buildException();
             }
         } catch (IOException e) {
-            sqlE = new SQLException(e);
+            sqlE = new PhoenixIOException(e);
         } finally {
             try {
                 if (admin != null) {
@@ -427,9 +429,9 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
                 }
             } catch (IOException e) {
                 if (sqlE == null) {
-                    sqlE = new SQLException(e);
+                    sqlE = new PhoenixIOException(e);
                 } else {
-                    sqlE.setNextException(new SQLException(e));
+                    sqlE.setNextException(new PhoenixIOException(e));
                 }
             } finally {
                 if (sqlE != null) {
@@ -481,8 +483,19 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
                         newDesc.addFamily(cd);
                     }
                 }
+                boolean removePhoenixJarPath = false;
                 if (isMetaTable) {
-                    checkClientServerCompatibility();
+                    /*
+                     *  FIXME: remove this once everyone has been upgraded to v 0.94.4+
+                     *  This hack checks to see if we've got "phoenix.jar" specified as
+                     *  the jar file path. We need to set this to null in this case due
+                     *  to a change in behavior of HBase.
+                     */
+                    String value = existingDesc.getValue("coprocessor$1");
+                    removePhoenixJarPath = (value != null && value.startsWith("phoenix.jar"));
+                    if (!removePhoenixJarPath) {
+                        checkClientServerCompatibility();
+                    }
                 }
                 // Update metadata of table
                 // TODO: Take advantage of online schema change ability by setting "hbase.online.schema.update.enable" to true
@@ -490,6 +503,17 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
                 // TODO: What if not all existing column families are present?
                 admin.modifyTable(tableName, newDesc);
                 admin.enableTable(tableName);
+                /*
+                 *  FIXME: remove this once everyone has been upgraded to v 0.94.4+
+                 * We've detected that the SYSTEM.TABLE needs to be upgraded, so let's
+                 * query and update all tables here.
+                 */
+                if (removePhoenixJarPath) {
+                    upgradeTablesFrom0_94_2to0_94_4(admin);
+                    // Do the compatibility check here, now that the jar path has been corrected.
+                    // This will work with the new and the old jar, so do the compatibility check now.
+                    checkClientServerCompatibility();
+                }
                 return false;
             } catch (org.apache.hadoop.hbase.TableNotFoundException e) {
             }
@@ -523,7 +547,7 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
             }
             return true;
         } catch (IOException e) {
-            sqlE = new SQLException(e);
+            sqlE = new PhoenixIOException(e);
         } finally {
             try {
                 if (admin != null) {
@@ -531,9 +555,9 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
                 }
             } catch (IOException e) {
                 if (sqlE == null) {
-                    sqlE = new SQLException(e);
+                    sqlE = new PhoenixIOException(e);
                 } else {
-                    sqlE.setNextException(new SQLException(e));
+                    sqlE.setNextException(new PhoenixIOException(e));
                 }
             } finally {
                 if (sqlE != null) {
@@ -542,6 +566,63 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
             }
         }
         return true; // will never make it here
+    }
+
+    /**
+     * FIXME: Temporary code to convert tables to 0.94.4 format (i.e. no jar specified
+     * in coprocessor definition). This is necessary because of a change in
+     * HBase behavior between 0.94.3 and 0.94.4. Once everyone has been upgraded
+     * this code can be removed.
+     * @throws SQLException
+     */
+    private void upgradeTablesFrom0_94_2to0_94_4(HBaseAdmin admin) throws IOException {
+        if (logger.isInfoEnabled()) {
+            logger.info("Upgrading tables from HBase 0.94.2 to 0.94.4+");
+        }
+        /* Use regular HBase scan instead of query because the jar on the server may
+         * not be compatible (we don't know yet) and this is our one chance to do
+         * the conversion automatically.
+         */
+        Scan scan = new Scan();
+        scan.addColumn(TABLE_FAMILY_BYTES, COLUMN_COUNT_BYTES);
+        // Add filter so that we only get the table row and not the column rows
+        scan.setFilter(new SingleColumnValueFilter(TABLE_FAMILY_BYTES, COLUMN_COUNT_BYTES, CompareOp.GREATER_OR_EQUAL, PDataType.INTEGER.toBytes(0)));
+        HTableInterface table = HTableFactoryProvider.getHTableFactory().getTable(TYPE_TABLE_NAME, connection, getExecutor());
+        ResultScanner scanner = table.getScanner(scan);
+        Result result = null;
+        while ((result = scanner.next()) != null) {
+            byte[] rowKey = result.getRow();
+            byte[][] rowKeyMetaData = new byte[2][];
+            getVarChars(rowKey, rowKeyMetaData);
+            byte[] schemaBytes = rowKeyMetaData[PhoenixDatabaseMetaData.SCHEMA_NAME_INDEX];
+            byte[] tableBytes = rowKeyMetaData[PhoenixDatabaseMetaData.TABLE_NAME_INDEX];
+            byte[] tableName = SchemaUtil.getTableName(schemaBytes, tableBytes);
+            if (!SchemaUtil.isMetaTable(tableName)) {
+                try {
+                    HTableDescriptor existingDesc = admin.getTableDescriptor(tableName);
+                    existingDesc.removeCoprocessor(ScanRegionObserver.class.getName());
+                    existingDesc.removeCoprocessor(UngroupedAggregateRegionObserver.class.getName());
+                    existingDesc.removeCoprocessor(GroupedAggregateRegionObserver.class.getName());
+                    existingDesc.removeCoprocessor(HashJoiningRegionObserver.class.getName());
+                    existingDesc.addCoprocessor(ScanRegionObserver.class.getName(), null, 1, null);
+                    existingDesc.addCoprocessor(UngroupedAggregateRegionObserver.class.getName(), null, 1, null);
+                    existingDesc.addCoprocessor(GroupedAggregateRegionObserver.class.getName(), null, 1, null);
+                    existingDesc.addCoprocessor(HashJoiningRegionObserver.class.getName(), null, 1, null);
+                    boolean wasEnabled = admin.isTableEnabled(tableName);
+                    if (wasEnabled) {
+                        admin.disableTable(tableName);
+                    }
+                    admin.modifyTable(tableName, existingDesc);
+                    if (wasEnabled) {
+                        admin.enableTable(tableName);
+                    }
+                } catch (org.apache.hadoop.hbase.TableNotFoundException e) {
+                    logger.error("Unable to convert " + Bytes.toString(tableName), e);
+                } catch (IOException e) {
+                    logger.error("Unable to convert " + Bytes.toString(tableName), e);
+                }
+            }
+        }
     }
 
     private boolean isCompatible(Long serverVersion) {
@@ -584,13 +665,16 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
             }
         } catch (Throwable t) {
             // This is the case if the "phoenix.jar" is not on the classpath of HBase on the region server
-            throw new SQLException("Compatibility check between client and server failed. Ensure that " + QueryConstants.DEFAULT_COPROCESS_PATH + " is put on the classpath of HBase in every region server: " + t.getMessage(), t);
+            throw new SQLExceptionInfo.Builder(SQLExceptionCode.INCOMPATIBLE_CLIENT_SERVER_JAR).setRootCause(t)
+                .setMessage("Ensure that " + QueryConstants.DEFAULT_COPROCESS_PATH + " is put on the classpath of HBase in every region server: " + t.getMessage())
+                .build().buildException();
         }
         if (isIncompatible) {
             buf.setLength(buf.length()-1);
-            throw new SQLException(buf.toString());
-        }        
+            throw new SQLExceptionInfo.Builder(SQLExceptionCode.OUTDATED_JARS).setMessage(buf.toString()).build().buildException();
+        }
     }
+
     /**
      * Invoke meta data coprocessor with one retry if the key was found to not be in the regions
      * (due to a table split)
@@ -619,6 +703,8 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
                 }
                 return result;
             }
+        } catch (IOException e) {
+            throw new PhoenixIOException(e);
         } catch (Throwable t) {
             throw new SQLException(t);
         }

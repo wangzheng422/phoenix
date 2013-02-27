@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
-
 import com.google.common.collect.Lists;
 import com.salesforce.phoenix.cache.GlobalCache;
 import com.salesforce.phoenix.jdbc.PhoenixDatabaseMetaData;
@@ -356,7 +355,7 @@ public class MetaDataEndpointImpl extends BaseEndpointCoprocessor implements Met
         try {
             // Disallow deletion of a system table
             // TODO: better to check KV, but this is our only system table for now
-            if (TYPE_SCHEMA.equals(schemaName) && TYPE_TABLE.equals(tableName)) {
+            if (Bytes.compareTo(TYPE_SCHEMA_BYTES, schemaName) == 0 && Bytes.compareTo(TYPE_TABLE_BYTES, tableName) == 0) {
                 return new MetaDataMutationResult(MutationCode.UNALLOWED_TABLE_MUTATION, EnvironmentEdgeManager.currentTimeMillis(), null);
             }
             RegionCoprocessorEnvironment env = (RegionCoprocessorEnvironment) getEnvironment();
@@ -400,7 +399,8 @@ public class MetaDataEndpointImpl extends BaseEndpointCoprocessor implements Met
                 }
                 List<Mutation> rowsToDelete = Lists.newArrayListWithExpectedSize(10);
                 do {
-                    Delete delete = new Delete(results.get(0).getRow(), clientTimeStamp, null);
+                    @SuppressWarnings("deprecation") // FIXME: Remove when unintentionally deprecated method is fixed (HBASE-7870).
+                    Delete delete = new Delete(results.get(0).getRow(), clientTimeStamp);
                     rowsToDelete.add(delete);
                     results.clear();
                     scanner.next(results);
@@ -459,7 +459,7 @@ public class MetaDataEndpointImpl extends BaseEndpointCoprocessor implements Met
         try {
             // Disallow deletion of a system table
             // TODO: better to check KV, but this is our only system table for now
-            if (TYPE_SCHEMA.equals(schemaName) && TYPE_TABLE.equals(tableName)) {
+            if (Bytes.compareTo(TYPE_SCHEMA_BYTES, schemaName) == 0 && Bytes.compareTo(TYPE_TABLE_BYTES, tableName) == 0) {
                 return new MetaDataMutationResult(MutationCode.UNALLOWED_TABLE_MUTATION, EnvironmentEdgeManager.currentTimeMillis(), null);
             }
             RegionCoprocessorEnvironment env = (RegionCoprocessorEnvironment) getEnvironment();

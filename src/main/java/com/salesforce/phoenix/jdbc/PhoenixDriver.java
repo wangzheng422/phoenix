@@ -38,7 +38,10 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 
+import com.salesforce.phoenix.exception.SQLExceptionCode;
+import com.salesforce.phoenix.exception.SQLExceptionInfo;
 import com.salesforce.phoenix.query.*;
+import com.salesforce.phoenix.util.PhoenixRuntime;
 import com.salesforce.phoenix.util.SQLCloseables;
 
 
@@ -58,7 +61,8 @@ import com.salesforce.phoenix.util.SQLCloseables;
  */
 public final class PhoenixDriver extends PhoenixEmbeddedDriver {
     private static final String ZOOKEEPER_QUARUM_ATTRIB = "hbase.zookeeper.quorum";
-    private static final String ZOOKEEPER_PORT = "hbase.zookeeper.property.clientPort";
+    private static final String ZOOKEEPER_PORT_ATTRIB = "hbase.zookeeper.property.clientPort";
+    private static final String ZOOKEEPER_ROOT_NODE_ATTRIB = "zookeeper.znode.parent";
     public static final PhoenixDriver INSTANCE;
     static {
         try {
@@ -67,7 +71,7 @@ public final class PhoenixDriver extends PhoenixEmbeddedDriver {
             throw new IllegalStateException("Untable to register " + PhoenixDriver.class.getName() + ": "+ e.getMessage());
         }
     }
-    private final ConcurrentMap<String,ConnectionQueryServices> connectionQueryServicesMap = new ConcurrentHashMap<String,ConnectionQueryServices>(3);
+    private final ConcurrentMap<ConnectionInfo,ConnectionQueryServices> connectionQueryServicesMap = new ConcurrentHashMap<ConnectionInfo,ConnectionQueryServices>(3);
 
     public PhoenixDriver() { // for Squirrel
         // Use production services implementation
@@ -76,29 +80,76 @@ public final class PhoenixDriver extends PhoenixEmbeddedDriver {
 
     @Override
     public boolean acceptsURL(String url) throws SQLException {
-        // Accept the url only if test=true attribute set
-        return super.acceptsURL(url) && !url.contains(";test=true");
+        // Accept the url only if test=true attribute not set
+        return super.acceptsURL(url) && !(url.endsWith(";test=true") || url.contains(";test=true;"));
     }
 
-    // TODO: need a way to replace existing ConnectionQueryServices with new one with modified PMetaData
     @Override
     protected ConnectionQueryServices getConnectionQueryServices(String url, Properties info) throws SQLException {
-        String serverName = getZookeeperQuorum(url);
-        String serverPort = getZookeeperPort(serverName);
-        ConnectionQueryServices connectionQueryServices = connectionQueryServicesMap.get(serverName);
+        ConnectionInfo connInfo = getConnectionInfo(url);
+        String zookeeperQuorum = connInfo.getZookeeperQuorum();
+        Integer port = connInfo.getPort();
+        String rootNode = connInfo.getRootNode();
+        boolean isConnectionless = false;
+        // Normalize connInfo so that a url explicitly specifying versus implicitly inheriting
+        // the default values will both share the same ConnectionQueryServices.
+        Configuration globalConfig = getQueryServices().getConfig();
+        if (zookeeperQuorum == null) {
+            zookeeperQuorum = globalConfig.get(ZOOKEEPER_QUARUM_ATTRIB);
+            if (zookeeperQuorum == null) {
+                throw new SQLExceptionInfo.Builder(SQLExceptionCode.MALFORMED_CONNECTION_URL)
+                .setMessage(url).build().buildException();
+            }
+        }
+        isConnectionless = PhoenixRuntime.CONNECTIONLESS.equals(zookeeperQuorum);
+
+        if (port == null) {
+            if (!isConnectionless) {
+                String portStr = globalConfig.get(ZOOKEEPER_PORT_ATTRIB);
+                if (portStr != null) {
+                    try {
+                        port = Integer.parseInt(portStr);
+                    } catch (NumberFormatException e) {
+                        throw new SQLExceptionInfo.Builder(SQLExceptionCode.MALFORMED_CONNECTION_URL)
+                        .setMessage(url).build().buildException();
+                    }
+                }
+            }
+        } else if (isConnectionless) {
+            throw new SQLExceptionInfo.Builder(SQLExceptionCode.MALFORMED_CONNECTION_URL)
+            .setMessage("Port may not be specified when using the connectionless url \"" + url + "\"").build().buildException();
+        }
+        if (rootNode == null) {
+            if (!isConnectionless) {
+                rootNode = globalConfig.get(ZOOKEEPER_ROOT_NODE_ATTRIB);
+            }
+        } else if (isConnectionless) {
+            throw new SQLExceptionInfo.Builder(SQLExceptionCode.MALFORMED_CONNECTION_URL)
+            .setMessage("Root node may not be specified when using the connectionless url \"" + url + "\"").build().buildException();
+        }
+        ConnectionInfo normalizedConnInfo = new ConnectionInfo(zookeeperQuorum, port, rootNode);
+        ConnectionQueryServices connectionQueryServices = connectionQueryServicesMap.get(normalizedConnInfo);
         if (connectionQueryServices == null) {
-            if (CONNECTIONLESS.equals(serverName)) {
+            if (isConnectionless) {
                 connectionQueryServices = new ConnectionlessQueryServicesImpl(getQueryServices());
             } else {
-                Configuration childConfig = HBaseConfiguration.create(getQueryServices().getConfig());
-                childConfig.set(ZOOKEEPER_QUARUM_ATTRIB, serverName);
-                if (serverPort != null) {
-                	childConfig.set(ZOOKEEPER_PORT, serverPort);
+                Configuration childConfig = HBaseConfiguration.create(globalConfig);
+                if (connInfo.getZookeeperQuorum() != null) {
+                    childConfig.set(ZOOKEEPER_QUARUM_ATTRIB, connInfo.getZookeeperQuorum());
+                } else if (childConfig.get(ZOOKEEPER_QUARUM_ATTRIB) == null) {
+                    throw new SQLExceptionInfo.Builder(SQLExceptionCode.MALFORMED_CONNECTION_URL)
+                    .setMessage(url).build().buildException();
+                }
+                if (connInfo.getPort() != null) {
+                	childConfig.setInt(ZOOKEEPER_PORT_ATTRIB, connInfo.getPort());
+                }
+                if (connInfo.getRootNode() != null) {
+                    childConfig.set(ZOOKEEPER_ROOT_NODE_ATTRIB, connInfo.getRootNode());
                 }
                 connectionQueryServices = new ConnectionQueryServicesImpl(getQueryServices(), childConfig);
             }
             connectionQueryServices.init(url, info);
-            ConnectionQueryServices prevValue = connectionQueryServicesMap.putIfAbsent(serverName, connectionQueryServices);
+            ConnectionQueryServices prevValue = connectionQueryServicesMap.putIfAbsent(normalizedConnInfo, connectionQueryServices);
             if (prevValue != null) {
                 connectionQueryServices = prevValue;
             }

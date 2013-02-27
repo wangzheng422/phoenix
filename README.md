@@ -10,7 +10,7 @@ The Phoenix query engine transforms your [SQL query](http://forcedotcom.github.c
 
 Tables are created and altered through [DDL statements](http://forcedotcom.github.com/phoenix/#create), and their schema is stored and versioned on the server in an HBase table. Columns are defined as either being part of a multi-part row key, or as key/value cells. You can also map Phoenix on to existing tables (see the [wiki](https://github.com/forcedotcom/phoenix/wiki) for more details).
 
-Applications interact with Phoenix through a standard JDBC interface; all the usual interfaces are supported, including `Connection`, `Statement`, `PreparedStatement`, and `ResultSet`. The driver class is `com.salesforce.phoenix.jdbc.PhoenixDriver`, and the connection url is `jdbc:phoenix:` followed by the zookeeper quorum hostname specification. For example:
+Applications interact with Phoenix through a standard JDBC interface; all the usual interfaces are supported, including `Connection`, `Statement`, `PreparedStatement`, and `ResultSet`. The driver class is `com.salesforce.phoenix.jdbc.PhoenixDriver`, and the [connection url](https://github.com/forcedotcom/Phoenix/wiki#wiki-connStr) is `jdbc:phoenix:` followed by the zookeeper quorum hostname specification plus optionally the port number and/or root node. For example:
 
         Class.forName("com.salesforce.phoenix.jdbc.PhoenixDriver");
         Connection conn = DriverManager.getConnection("jdbc:phoenix:localhost");
@@ -18,7 +18,7 @@ Applications interact with Phoenix through a standard JDBC interface; all the us
 For detailed documentation on the current level of SQL support, see our [language reference guide](http://forcedotcom.github.com/phoenix/). For details about how Phoenix handles schema, transactions, and more, see the [wiki](https://github.com/forcedotcom/phoenix/wiki).
 
 ## System Requirements ##
-* HBase v 0.94.2 or higher
+* HBase v 0.94.4 or above
 * JDK 6 or higher
 
 ## Build Requirements ##
@@ -29,10 +29,12 @@ For detailed documentation on the current level of SQL support, see our [languag
 ## Installation ##
 To install a pre-built phoenix, use these directions:
 
-* Expand the following tar: [phoenix-1.0-install.tar](http://phoenix-bin.github.com/client/phoenix-1.0-install.tar)
-* Add the phoenix-1.0.jar to the classpath of every HBase region server. An easy way to do this is to copy it into the HBase lib directory.
+* Download and expand the latest phoenix-[version]-install.tar from [download page](https://github.com/forcedotcom/phoenix/wiki/Download)
+* Remove prior phoenix-[version].jar from every HBase region server.
+* Add the phoenix-[version].jar to the classpath of every HBase region server. An easy way to do this is to copy it into the HBase lib directory.
 * Restart all region servers.
-* Add the phoenix-1.0-client.jar to the classpath of any Phoenix client.
+* Remove prior phoenix-[version]-client.jar from the classpath of any Phoenix client.
+* Add the phoenix-[version]-client.jar to the classpath of any Phoenix client.
 
 Alternatively, you can build it yourself using maven by following these [build instructions](https://github.com/forcedotcom/Phoenix/wiki#wiki-building).
 
@@ -43,15 +45,16 @@ Alternatively, you can build it yourself using maven by following these [build i
 
 One way to experiment with Phoenix is to download and install a SQL client such as [SQuirrel](http://squirrel-sql.sourceforge.net/). Since Phoenix is a JDBC driver, integration with tools such as this are seamless. Here are the setup steps necessary:
 
-1. Copy the phoenix-1.0-client.jar into the lib directory of SQuirrel
-2. Start SQuirrel and add new driver to SQuirrel (Drivers -> New Driver)
-3. In Add Driver dialog box, set Name to Phoenix
-4. Press List Drivers button and com.salesforce.phoenix.jdbc.PhoenixDriver should be automatically populated in the Class Name textbox. Press OK to close this dialog.
-5. Switch to Alias tab and create the new Alias (Aliases -> New Aliases)
-6. In the dialog box, Name: _any name_, Driver: Phoenix, User Name: _anything_, Password: _anything_
-7. Construct URL as follows: jdbc:phoenix: _zookeeper quorum server_. For example, to connect to a local HBase use: jdbc:phoenix:localhost
-8. Press Test (which should succeed if everything is setup correctly) and press OK to close.
-9. Now double click on your newly created Phoenix alias and click Connect. Now you are ready to run SQL queries against Phoenix.
+1. Remove prior phoenix-[version]-client.jar from the lib directory of SQuirrel
+2. Copy the phoenix-[version]-client.jar into the lib directory of SQuirrel
+3. Start SQuirrel and add new driver to SQuirrel (Drivers -> New Driver)
+4. In Add Driver dialog box, set Name to Phoenix
+5. Press List Drivers button and com.salesforce.phoenix.jdbc.PhoenixDriver should be automatically populated in the Class Name textbox. Press OK to close this dialog.
+6. Switch to Alias tab and create the new Alias (Aliases -> New Aliases)
+7. In the dialog box, Name: _any name_, Driver: Phoenix, User Name: _anything_, Password: _anything_
+8. Construct URL as follows: jdbc:phoenix: _zookeeper quorum server_. For example, to connect to a local HBase use: jdbc:phoenix:localhost
+9. Press Test (which should succeed if everything is setup correctly) and press OK to close.
+10. Now double click on your newly created Phoenix alias and click Connect. Now you are ready to run SQL queries against Phoenix.
 
 Through SQuirrel, you can issue SQL statements in the SQL tab (create tables, insert data, run queries), and inspect table metadata in the Object tab (i.e. list tables, their columns, primary keys, and types).
 
@@ -59,11 +62,11 @@ Through SQuirrel, you can issue SQL statements in the SQL tab (create tables, in
 
 <b> Command Line </b>
 
-In addition, you can use the phoenix-1.0-client.jar to execute SQL and/or load CSV data directly. Here are few examples:
+In addition, you can use the bin/psql.sh to execute SQL and/or load CSV data directly. Here are few examples:
 
-        $ java -jar phoenix-1.0-client.jar localhost examples/stock_symbol.sql
-        $ java -jar phoenix-1.0-client.jar localhost examples/stock_symbol.sql examples/stock_symbol.csv
-        $ java -jar phoenix-1.0-client.jar -t stock_symbol -h symbol,price,date localhost *.csv
+	$ psql.sh localhost ../examples/stock_symbol.sql
+        $ psql.sh localhost localhost ../examples/web_stat.sql ../examples/web_stat.csv ../examples/web_stat_queries.sql
+        $ psql.sh -t stock_symbol -h symbol,price,date localhost ../examples/stock_symbol.sql
 
 ![psql](http://forcedotcom.github.com/phoenix/images/psql.png)
 
@@ -92,7 +95,7 @@ Currently, Phoenix hosts its own maven repository in github. This is done for co
     <dependency>
         <groupId>com.salesforce</groupId>
         <artifactId>phoenix</artifactId>
-        <version>1.0</version>
+        <version>1.1</version>
      ...
     </dependency>
 ```
@@ -104,4 +107,5 @@ Join one or both of our Google groups:
 
 * [Phoenix HBase User](https://groups.google.com/forum/#!forum/phoenix-hbase-user) for users of Phoenix.
 * [Phoenix HBase Dev](https://groups.google.com/forum/#!forum/phoenix-hbase-dev) for developers of Phoenix.
+
 [![githalytics.com alpha](https://cruel-carlota.pagodabox.com/8438f3b844208e09a811699265666a8d "githalytics.com")](http://githalytics.com/forcedotcom/phoenix.git)

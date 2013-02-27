@@ -69,6 +69,9 @@ public class ExtendedQueryExecTest extends BaseClientMangedTimeTest {
         }
     }
 
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+            value="RV_RETURN_VALUE_IGNORED",
+            justification="Test code.")
     @Test
     public void testTypeMismatchToDateFunctionBind() throws Exception {
         long ts = nextTimestamp();
@@ -83,7 +86,7 @@ public class ExtendedQueryExecTest extends BaseClientMangedTimeTest {
             statement.executeQuery();
             fail();
         } catch (SQLException e) {
-            assertTrue(e.getMessage().contains("Type mismatch for TO_DATE argument"));
+            assertTrue(e.getMessage().contains("Type mismatch. expected: [VARCHAR] but was: DATE at TO_DATE"));
         } finally {
             conn.close();
         }

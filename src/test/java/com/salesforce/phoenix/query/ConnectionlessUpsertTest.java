@@ -27,26 +27,24 @@
  ******************************************************************************/
 package com.salesforce.phoenix.query;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.sql.*;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Properties;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Mutation;
 import org.junit.*;
 
+import com.salesforce.phoenix.exception.SQLExceptionCode;
 import com.salesforce.phoenix.jdbc.PhoenixDriver;
-import com.salesforce.phoenix.jdbc.PhoenixEmbeddedDriver;
 import com.salesforce.phoenix.schema.PDataType;
 import com.salesforce.phoenix.util.PhoenixRuntime;
 
 
 public class ConnectionlessUpsertTest {
     private static String getUrl() {
-        return PhoenixRuntime.EMBEDDED_JDBC_PROTOCOL + PhoenixEmbeddedDriver.CONNECTIONLESS;
+        return PhoenixRuntime.JDBC_PROTOCOL + PhoenixRuntime.JDBC_PROTOCOL_SEPARATOR + PhoenixRuntime.CONNECTIONLESS;
     }
     
     @BeforeClass
@@ -75,7 +73,6 @@ public class ConnectionlessUpsertTest {
         "    created_date date\n" +
         "    CONSTRAINT pk PRIMARY KEY (organization_id, key_prefix, entity_history_id)\n" +
         ")";
-        System.out.println(dmlStmt);
         Properties props = new Properties();
         Connection conn = DriverManager.getConnection(getUrl(), props);
         PreparedStatement statement = conn.prepareStatement(dmlStmt);
@@ -98,23 +95,33 @@ public class ConnectionlessUpsertTest {
         statement.setDate(5,now);
         statement.execute();
         
-        int count = 0;
-        List<Mutation>  mutations = PhoenixRuntime.getUncommittedMutations(conn);
-        for (Mutation m : mutations) {
-            for (List<KeyValue> kvs : m.getFamilyMap().values()) {
-                if (count == 0) {
-                    assertEquals("Eli", PDataType.VARCHAR.toObject(kvs.get(0).getValue()));
-                    assertEquals(now, PDataType.DATE.toObject(kvs.get(1).getValue()));
-                } else if (count == 1) {
-                    assertEquals("Simon", PDataType.VARCHAR.toObject(kvs.get(0).getValue()));
-                    assertEquals(now, PDataType.DATE.toObject(kvs.get(1).getValue()));
-                }
-                count++;
-            }
-        }
-        assertEquals(2,count);
+        Iterator<KeyValue> iterator = PhoenixRuntime.getUncommittedData(conn).iterator();
+        assertTrue(iterator.hasNext());
+        assertEquals("Eli", PDataType.VARCHAR.toObject(iterator.next().getValue()));
+        assertTrue(iterator.hasNext());
+        assertEquals(now, PDataType.DATE.toObject(iterator.next().getValue()));
+        assertTrue(iterator.hasNext());
+        assertNull(PDataType.VARCHAR.toObject(iterator.next().getValue()));
+        assertTrue(iterator.hasNext());
+        assertEquals("Simon", PDataType.VARCHAR.toObject(iterator.next().getValue()));
+        assertTrue(iterator.hasNext());
+        assertEquals(now, PDataType.DATE.toObject(iterator.next().getValue()));
+        assertTrue(iterator.hasNext());
+        assertNull(PDataType.VARCHAR.toObject(iterator.next().getValue()));
+        assertFalse(iterator.hasNext());
         conn.rollback(); // to clear the list of mutations for the next
     }
 
+    
+    @Test
+    public void testNoConnectionInfo() throws Exception {
+        try {
+            DriverManager.getConnection(PhoenixRuntime.JDBC_PROTOCOL);
+            fail();
+        } catch (SQLException e) {
+            assertEquals(SQLExceptionCode.MALFORMED_CONNECTION_URL.getSQLState(),e.getSQLState());
+        }
+    }
+    
 
 }

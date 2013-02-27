@@ -27,7 +27,6 @@
  ******************************************************************************/
 package com.salesforce.phoenix.iterate;
 
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.*;
@@ -38,7 +37,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-
 
 import com.google.common.base.*;
 import com.google.common.collect.*;
@@ -108,8 +106,6 @@ public class ParallelIterators extends ExplainTable implements ResultIterators {
     /**
      * Splits the given scan's key range so that each split can be queried in parallel
      *
-     * @param config configuration object that holds concurrency settings for
-     *      the {@link ParallelIterators}.
      * @param scan the scan to parallelize
      * @param allTableRegions all online regions for the table to be scanned
      * @return the key ranges that should be scanned in parallel
@@ -120,7 +116,7 @@ public class ParallelIterators extends ExplainTable implements ResultIterators {
         final int targetConcurrency = config.getInt(QueryServices.TARGET_QUERY_CONCURRENCY_ATTRIB,
                 QueryServicesOptions.DEFAULT_TARGET_QUERY_CONCURRENCY);
         final int maxConcurrency = config.getInt(QueryServices.MAX_QUERY_CONCURRENCY_ATTRIB,
-                QueryServicesOptions.DEFAULT_MAX_QUERY_CONCURRRENCY);
+                QueryServicesOptions.DEFAULT_MAX_QUERY_CONCURRENCY);
 
         Preconditions.checkArgument(targetConcurrency >= 1, "Invalid target concurrency: " + targetConcurrency);
         Preconditions.checkArgument(maxConcurrency >= targetConcurrency , "Invalid max concurrency: " + maxConcurrency);
@@ -180,6 +176,7 @@ public class ParallelIterators extends ExplainTable implements ResultIterators {
                         continue;
                     }
                 }
+                // TODO: else if scan startRow > region startRow use scan startRow as starting point, but expand out the key
                 if (upperUnbound) {
                     stopKey = services.getStatsManager().getMaxKey(table);
                     if (stopKey == null) {
@@ -187,6 +184,9 @@ public class ParallelIterators extends ExplainTable implements ResultIterators {
                         continue;
                     }
                 }
+                // TODO: else if scan endRow < region endRow use scan endRow as ending point, but expand out the key
+                // Special case for fully qualified key - use only single region.
+                // Maybe decrease parallelization as more of row key was specified?
 
                 byte[][] boundaries = null;
                 // Both startKey and stopKey will be empty the first time
@@ -229,7 +229,7 @@ public class ParallelIterators extends ExplainTable implements ResultIterators {
         return splits;
     }
 
-    public List<KeyRange> getSplits() throws IOException {
+    public List<KeyRange> getSplits() {
         return splits;
     }
 
@@ -253,28 +253,29 @@ public class ParallelIterators extends ExplainTable implements ResultIterators {
                 for (KeyRange split : splits) {
                     final Scan splitScan = new Scan(this.context.getScan());
                     // Intersect with existing start/stop key
-                    ScanUtil.intersectScanRange(splitScan, split.getLowerRange(), split.getUpperRange());
-                    Future<PeekingResultIterator> future =
-                        executor.submit(new JobCallable<PeekingResultIterator>() {
-
-                        @Override
-                        public PeekingResultIterator call() throws Exception {
-                            // TODO: different HTableInterfaces for each thread or the same is better?
-                            ResultIterator scanner = new TableResultIterator(context, table, splitScan);
-                            return new SpoolingResultIterator(scanner, mm, spoolThresholdBytes, rowCounter);
-                        }
-
-                        /**
-                         * Defines the grouping for round robin behavior.  All threads spawned to process
-                         * this scan will be grouped together and time sliced with other simultaneously
-                         * executing parallel scans.
-                         */
-                        @Override
-                        public Object getJobId() {
-                            return ParallelIterators.this;
-                        }
-                    });
-                    futures.add(new Pair<byte[],Future<PeekingResultIterator>>(split.getLowerRange(),future));
+                    if (ScanUtil.intersectScanRange(splitScan, split.getLowerRange(), split.getUpperRange())) {
+                        Future<PeekingResultIterator> future =
+                            executor.submit(new JobCallable<PeekingResultIterator>() {
+    
+                            @Override
+                            public PeekingResultIterator call() throws Exception {
+                                // TODO: different HTableInterfaces for each thread or the same is better?
+                                ResultIterator scanner = new TableResultIterator(context, table, splitScan);
+                                return new SpoolingResultIterator(scanner, mm, spoolThresholdBytes, rowCounter);
+                            }
+    
+                            /**
+                             * Defines the grouping for round robin behavior.  All threads spawned to process
+                             * this scan will be grouped together and time sliced with other simultaneously
+                             * executing parallel scans.
+                             */
+                            @Override
+                            public Object getJobId() {
+                                return ParallelIterators.this;
+                            }
+                        });
+                        futures.add(new Pair<byte[],Future<PeekingResultIterator>>(split.getLowerRange(),future));
+                    }
                 }
 
                 int timeoutMs = config.getInt(QueryServices.THREAD_TIMEOUT_MS_ATTRIB, DEFAULT_THREAD_TIMEOUT_MS);

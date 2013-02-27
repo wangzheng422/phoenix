@@ -28,6 +28,7 @@
 package com.salesforce.phoenix.expression.aggregator;
 
 import java.io.*;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.io.WritableUtils;
@@ -52,7 +53,8 @@ public class ServerAggregators extends Aggregators {
     private ServerAggregators(SingleAggregateFunction[] functions, Aggregator[] aggregators, Expression[] expressions, int minNullableIndex) {
         super(functions, aggregators, minNullableIndex);
         if (aggregators.length != expressions.length) {
-            throw new IllegalArgumentException("Number of aggregators (" + aggregators.length + ") must match the number of expressions (" + expressions + ")");
+            throw new IllegalArgumentException("Number of aggregators (" + aggregators.length 
+                    + ") must match the number of expressions (" + Arrays.toString(expressions) + ")");
         }
         this.expressions = expressions;
     }
@@ -68,7 +70,7 @@ public class ServerAggregators extends Aggregators {
     
     /**
      * Serialize an Aggregator into a byte array
-     * @param aggregator the aggregator to serialize
+     * @param aggFuncs list of aggregator to serialize
      * @return serialized byte array respresentation of aggregator
      */
     public static byte[] serialize(List<SingleAggregateFunction> aggFuncs, int minNullableIndex) {
