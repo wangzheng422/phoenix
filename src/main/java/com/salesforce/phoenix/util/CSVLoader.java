@@ -33,6 +33,8 @@ import java.util.*;
 
 
 import com.google.common.collect.Maps;
+import com.salesforce.phoenix.exception.SQLExceptionCode;
+import com.salesforce.phoenix.exception.SQLExceptionInfo;
 import com.salesforce.phoenix.jdbc.PhoenixConnection;
 import com.salesforce.phoenix.schema.PDataType;
 
@@ -82,7 +84,7 @@ public class CSVLoader {
 	 * column value to correct type before upsert. Note: Column Names are
 	 * expected as first line of CSV file.
 	 * 
-	 * @param fileName
+	 * @param reader CSVReader instance
 	 * @throws Exception
 	 */
 	public void upsert(CSVReader reader) throws Exception {
@@ -178,7 +180,8 @@ public class CSVLoader {
                 Integer sqlType = columnNameToTypeMap.get(columnName);
                 if (sqlType == null) {
                     if (isStrict) {
-                        throw new SQLException("The column " + columnName + " does not exist in table " + tableName);
+                        throw new SQLExceptionInfo.Builder(SQLExceptionCode.COLUMN_NOT_FOUND)
+                            .setColumnName(columnName).setTableName(tableName).build().buildException();
                     }
                     unfoundColumnCount++;
                 } else {
@@ -186,7 +189,8 @@ public class CSVLoader {
                 }
             }
             if (unfoundColumnCount == columns.size()) {
-                throw new SQLException("None of the specified columns " + columns + " exist in table " + tableName);
+                throw new SQLExceptionInfo.Builder(SQLExceptionCode.COLUMN_NOT_FOUND)
+                    .setColumnName(Arrays.toString(columns.toArray(new String[0]))).setTableName(tableName).build().buildException();
             }
 	    }
 		return columnType;

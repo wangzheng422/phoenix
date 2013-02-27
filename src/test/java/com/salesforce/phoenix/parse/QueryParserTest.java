@@ -27,6 +27,7 @@
  ******************************************************************************/
 package com.salesforce.phoenix.parse;
 
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.StringReader;
@@ -203,7 +204,7 @@ public class QueryParserTest {
             parser.parseStatement();
             fail();
         } catch (SQLException e) {
-            // expected
+            assertTrue(e.getMessage(), e.getMessage().contains("ERROR 603 (42P00): Syntax error. Mismatched input. Expecting \"FROM\", got \".\" at line 1, column 41."));
         }
     }
 
@@ -221,7 +222,7 @@ public class QueryParserTest {
             parser.parseStatement();
             fail();
         } catch (SQLException e) {
-            // expected
+            assertTrue(e.getMessage(), e.getMessage().contains("ERROR 601 (42P00): Syntax error. Encountered \"seelect\" at line 1, column 1."));
         }
     }
 
@@ -239,7 +240,7 @@ public class QueryParserTest {
             parser.parseStatement();
             fail();
         } catch (SQLException e) {
-            // expected
+            assertTrue(e.getMessage(), e.getMessage().contains("ERROR 603 (42P00): Syntax error. Unexpected input. Expecting \"EOF\", got \")\" at line 6, column 26."));
         }
     }
 
@@ -251,7 +252,7 @@ public class QueryParserTest {
             "and rownum <= 2000\n" +
             "and (ind.organization_id = '000000000000000')\n" +
             "and (ind.key_prefix = '00T')\n" +
-            "and (ind.name_type = 't'))"
+            "and (ind.name_type = 't')"
             ));
         try {
             parser.parseStatement();
@@ -269,31 +270,31 @@ public class QueryParserTest {
             "and rownum <= 2000\n" +
             "and (ind.organization_id = '000000000000000')\n" +
             "and (ind.key_prefix = '00T')\n" +
-            "and (ind.name_type = 't'))"
+            "and (ind.name_type = 't')"
             ));
         try {
             parser.parseStatement();
             fail();
         } catch (SQLException e) {
-            // expected
+            assertTrue(e.getMessage(), e.getMessage().contains("ERROR 601 (42P00): Syntax error. Encountered \"*\" at line 1, column 32."));
         }
     }
 
     @Test
     public void testUnknownFunction() throws Exception {
         SQLParser parser = new SQLParser(new StringReader(
-            "select /*gatherSlowStats*/ trim(ind.key_prefix) from core.search_name_lookup ind\n" +
+            "select /*gatherSlowStats*/ bogus_function(ind.key_prefix) from core.search_name_lookup ind\n" +
             "where (ind.name = 'X')\n" +
             "and rownum <= 2000\n" +
             "and (ind.organization_id = '000000000000000')\n" +
             "and (ind.key_prefix = '00T')\n" +
-            "and (ind.name_type = 't'))"
+            "and (ind.name_type = 't')"
             ));
         try {
             parser.parseStatement();
             fail();
         } catch (SQLException e) {
-            // expected
+            assertTrue(e.getMessage(), e.getMessage().contains("ERROR 604 (42P00): Syntax error. Unknown function: \"BOGUS_FUNCTION\"."));
         }
     }
 
@@ -339,4 +340,63 @@ public class QueryParserTest {
         parser.parseStatement();
     }
 
+    @Test
+    public void testParsingStatementWithMispellToken() throws Exception {
+        try {
+            SQLParser parser = new SQLParser(new StringReader(
+                    "selects a from b\n" +
+                    "where e = d\n"));
+            parser.parseStatement();
+        } catch (SQLException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("ERROR 601 (42P00): Syntax error. Encountered \"selects\" at line 1, column 1."));
+        }
+        try {
+            SQLParser parser = new SQLParser(new StringReader(
+                    "select a froms b\n" +
+                    "where e = d\n"));
+            parser.parseStatement();
+        } catch (SQLException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("ERROR 602 (42P00): Syntax error. Missing \"FROM\" at line 1, column 16."));
+        }
+    }
+
+    @Test
+    public void testParsingStatementWithExtraToken() throws Exception {
+        try {
+            SQLParser parser = new SQLParser(new StringReader(
+                    "select a,, from b\n" +
+                    "where e = d\n"));
+            parser.parseStatement();
+        } catch (SQLException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("ERROR 601 (42P00): Syntax error. Encountered \",\" at line 1, column 10."));
+        }
+        try {
+            SQLParser parser = new SQLParser(new StringReader(
+                    "select a from from b\n" +
+                    "where e = d\n"));
+            parser.parseStatement();
+        } catch (SQLException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("ERROR 601 (42P00): Syntax error. Encountered \"from\" at line 1, column 15."));
+        }
+    }
+
+    @Test
+    public void testParsingStatementWithMissingToken() throws Exception {
+        try {
+            SQLParser parser = new SQLParser(new StringReader(
+                    "select a b\n" +
+                    "where e = d\n"));
+            parser.parseStatement();
+        } catch (SQLException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("ERROR 603 (42P00): Syntax error. Mismatched input. Expecting \"FROM\", got \"where\" at line 2, column 1."));
+        }
+        try {
+            SQLParser parser = new SQLParser(new StringReader(
+                    "select a from b\n" +
+                    "where d\n"));
+            parser.parseStatement();
+        } catch (SQLException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("ERROR 601 (42P00): Syntax error. Encountered \"d\" at line 2, column 7."));
+        }
+    }
 }

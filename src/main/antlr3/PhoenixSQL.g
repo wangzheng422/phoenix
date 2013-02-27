@@ -213,8 +213,19 @@ package com.salesforce.phoenix.parse;
         return Integer.toString(anonBindNum++);
     }
 
-    protected Object recoverFromMismatchedToken(IntStream input, int ttype, BitSet follow) throws RecognitionException {
-        throw new MismatchedTokenException(ttype, input);
+    protected Object recoverFromMismatchedToken(IntStream input, int ttype, BitSet follow)
+        throws RecognitionException {
+        RecognitionException e = null;
+        // if next token is what we are looking for then "delete" this token
+        if (mismatchIsUnwantedToken(input, ttype)) {
+            e = new UnwantedTokenException(ttype, input);
+        } else if (mismatchIsMissingToken(input, follow)) {
+            Object inserted = getMissingSymbol(input, e, ttype, follow);
+            e = new MissingTokenException(ttype, input, inserted);
+        } else {
+            e = new MismatchedTokenException(ttype, input);
+        }
+        throw e;
     }
 
     public Object recoverFromMismatchedSet(IntStream input, RecognitionException e, BitSet follow)
@@ -414,8 +425,11 @@ column_defs returns [List<ColumnDef> ret]
 ;
 
 column_def returns [ColumnDef ret]
-    :   c=column_def_name dt=identifier (LPAREN l=NUMBER RPAREN)?  (n=NOT? NULL)? (pk=PRIMARY KEY)?
-        {$ret = factory.columnDef(c, dt, n==null, l == null ? null : Integer.parseInt( l.getText() ), pk != null ); }
+    :   c=column_def_name dt=identifier (LPAREN l=NUMBER (COMMA s=NUMBER)? RPAREN)? (n=NOT? NULL)? (pk=PRIMARY KEY)?
+        {$ret = factory.columnDef(c, dt, n==null,
+            l == null ? null : Integer.parseInt( l.getText() ),
+            s == null ? null : Integer.parseInt( s.getText() ),
+            pk != null ); }
     ;
 
 // Parses a select statement which must be the only statement (expects an EOF after the statement).

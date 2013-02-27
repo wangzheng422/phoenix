@@ -36,6 +36,8 @@ import java.util.concurrent.Executor;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import com.salesforce.phoenix.exception.SQLExceptionCode;
+import com.salesforce.phoenix.exception.SQLExceptionInfo;
 import com.salesforce.phoenix.execute.MutationState;
 import com.salesforce.phoenix.jdbc.PhoenixStatement.PhoenixStatementParser;
 import com.salesforce.phoenix.query.*;
@@ -77,9 +79,9 @@ public class PhoenixConnection implements Connection, com.salesforce.phoenix.jdb
         // Copy so client cannot change
         this.info = info == null ? new Properties() : new Properties(info);
         this.services = services;
-        this.scn = JDBCUtil.getCurrentSCN(url, info);
-        this.tenantId = JDBCUtil.getTenantId(url, info);
-        this.upsertBatchSize = JDBCUtil.getUpsertBatchSize(url, info, services.getConfig());
+        this.scn = JDBCUtil.getCurrentSCN(url, this.info);
+        this.tenantId = JDBCUtil.getTenantId(url, this.info);
+        this.upsertBatchSize = JDBCUtil.getMutateBatchSize(url, this.info, services.getConfig());
         datePattern = services.getConfig().get(QueryServices.DATE_FORMAT_ATTRIB, DateUtil.DEFAULT_DATE_FORMAT);
         int maxSize = services.getConfig().getInt(QueryServices.MAX_MUTATION_SIZE_ATTRIB,QueryServicesOptions.DEFAULT_MAX_MUTATION_SIZE);
         Format dateTimeFormat = DateUtil.getDateFormatter(datePattern);
@@ -273,7 +275,7 @@ public class PhoenixConnection implements Connection, com.salesforce.phoenix.jdb
     /**
      * Back-door way to inject processing into walking through a result set
      * @param statementFactory
-     * @return
+     * @return PhoenixStatement
      * @throws SQLException
      */
     public PhoenixStatement createStatement(PhoenixStatementFactory statementFactory) throws SQLException {
@@ -505,7 +507,9 @@ public class PhoenixConnection implements Connection, com.salesforce.phoenix.jdb
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
         if (!iface.isInstance(this)) {
-            throw new SQLException(this.getClass().getName() + " not unwrappable from " + iface.getName());
+            throw new SQLExceptionInfo.Builder(SQLExceptionCode.CLASS_NOT_UNWRAPPABLE)
+                .setMessage(this.getClass().getName() + " not unwrappable from " + iface.getName())
+                .build().buildException();
         }
         return (T)this;
     }

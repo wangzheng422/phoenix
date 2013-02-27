@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableUtils;
 
-
 import com.google.common.collect.*;
 import com.salesforce.phoenix.query.QueryConstants;
 import com.salesforce.phoenix.util.*;
@@ -354,7 +353,9 @@ public class PTableImpl implements PTable {
         public void delete() {
             setValues = new Put(key);
             unsetValues = new Delete(key);
-            deleteRow = new Delete(key,ts,null);
+            @SuppressWarnings("deprecation") // FIXME: Remove when unintentionally deprecated method is fixed (HBASE-7870).
+            Delete delete = new Delete(key,ts);
+            deleteRow = delete;
         }
     }
 
@@ -362,7 +363,7 @@ public class PTableImpl implements PTable {
     public PColumnFamily getColumnFamily(String familyName) throws ColumnFamilyNotFoundException {
         PColumnFamily family = familyByString.get(familyName);
         if (family == null) {
-            throw new ColumnFamilyNotFoundException(familyName, "Column family not found: '" + familyName + "'");
+            throw new ColumnFamilyNotFoundException(familyName);
         }
         return family;
     }
@@ -372,7 +373,7 @@ public class PTableImpl implements PTable {
         PColumnFamily family = familyByBytes.get(familyBytes);
         if (family == null) {
             String familyName = Bytes.toString(familyBytes);
-            throw new ColumnFamilyNotFoundException(familyName, "Column family not found: '" + familyName + "'");
+            throw new ColumnFamilyNotFoundException(familyName);
         }
         return family;
     }

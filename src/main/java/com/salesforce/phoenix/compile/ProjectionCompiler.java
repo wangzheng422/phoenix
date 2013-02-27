@@ -73,7 +73,7 @@ public class ProjectionCompiler {
      * @param statement SQL statement being compiled
      * @param context query context kept between compilation of different query clauses
      * @param limit maximum number of rows to scan during query execution or null if unbounded
-     * @param groupByExpressions list of GROUP BY expressions or the empty list if no GROUP BY
+     * @param groupBy list of GROUP BY expressions or the empty list if no GROUP BY
      * @return projector used to access row values during scan
      * @throws SQLException 
      * @throws SQLFeatureNotSupportedException if an unsupported construct is encountered.
@@ -131,7 +131,7 @@ public class ProjectionCompiler {
                     // during expression evaluation and then convert back to INTEGER on UPSERT SELECT (and we don't have
                     // (an actual value we can specifically check against).
                     if (expression.getDataType() != null && !expression.getDataType().isComparableTo(targetType)) {
-                        throw new SQLException("Type mismatch: " + expression.getDataType() + " and " + targetType + " for column " + targetColumns[index]);
+                        throw new ArgumentTypeMismatchException(targetType, expression.getDataType(), "column: " + targetColumns[index]);
                     }
                     expression = CoerceExpression.create(expression, targetType);
                 }
@@ -152,7 +152,7 @@ public class ProjectionCompiler {
                     }
                 }
                 String columnAlias = aliasedNode.getAlias();
-                boolean isCaseSensitive = (node != null && aliasedNode.isCaseSensitve()) || selectVisitor.isCaseSensitive;
+                boolean isCaseSensitive = aliasedNode.isCaseSensitve() || selectVisitor.isCaseSensitive;
                 String name = columnAlias == null ? node.toString() : columnAlias;
                 projectedColumns.add(new ExpressionProjector(name, table.getName().getString(), expression, isCaseSensitive));
             }
@@ -268,7 +268,7 @@ public class ProjectionCompiler {
         @Override
         protected ColumnRef resolveColumn(ColumnParseNode node) throws SQLException {
             ColumnRef ref = super.resolveColumn(node);
-            isCaseSensitive &= node.isCaseSensitive();
+            isCaseSensitive = isCaseSensitive && node.isCaseSensitive();
             return ref;
         }
         

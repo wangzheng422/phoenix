@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Maps;
+import com.salesforce.phoenix.exception.UnknownFunctionException;
 import com.salesforce.phoenix.expression.Expression;
 import com.salesforce.phoenix.expression.ExpressionType;
 import com.salesforce.phoenix.expression.function.*;
@@ -42,6 +43,7 @@ import com.salesforce.phoenix.parse.FunctionParseNode.BuiltInFunction;
 import com.salesforce.phoenix.parse.FunctionParseNode.BuiltInFunctionInfo;
 import com.salesforce.phoenix.parse.JoinTableNode.JoinType;
 import com.salesforce.phoenix.schema.PDataType;
+import com.salesforce.phoenix.schema.TypeMismatchException;
 import com.salesforce.phoenix.util.SchemaUtil;
 
 
@@ -160,7 +162,7 @@ public class ParseNodeFactory {
         initBuiltInFunctionMap();
         BuiltInFunctionInfo info = BUILT_IN_FUNCTION_MAP.get(new BuiltInFunctionKey(normalizedName,children.size()));
         if (info == null) {
-            throw new RuntimeException("Unknown function '" + normalizedName + "'");
+            throw new UnknownFunctionException(normalizedName);
         }
         return info;
     }
@@ -232,8 +234,12 @@ public class ParseNodeFactory {
         return new PropertyName(familyName, propertyName);
     }
 
-    public ColumnDef columnDef(ColumnDefName columnDefName, String sqlTypeName, boolean isNull, Integer maxLength, boolean isPK) {
-        return new ColumnDef(columnDefName, sqlTypeName, isNull, maxLength, isPK);
+    public ColumnDef columnDef(ColumnDefName columnDefName, String sqlTypeName, boolean isNull, Integer arg1, Integer arg2, boolean isPK) {
+        if (sqlTypeName.equals(PDataType.DECIMAL.toString())) {
+            return new DecimalColumnDef(columnDefName, sqlTypeName, isNull, arg1, arg2, isPK);
+        } else {
+            return new ColumnDef(columnDefName, sqlTypeName, isNull, arg1, isPK);
+        }
     }
 
     public PrimaryKeyConstraint primaryKey(String name, List<String> columnNames) {
@@ -353,7 +359,7 @@ public class ParseNodeFactory {
 
     private void checkTypeMatch (PDataType expectedType, PDataType actualType) throws SQLException {
         if (!expectedType.isCoercibleTo(actualType)) {
-            throw new SQLException("Type mismatch: " + expectedType + " and " + actualType);
+            throw new TypeMismatchException(expectedType, actualType);
         }
     }
 

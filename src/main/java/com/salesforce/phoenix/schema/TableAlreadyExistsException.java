@@ -29,7 +29,8 @@ package com.salesforce.phoenix.schema;
 
 import java.sql.SQLException;
 
-import com.salesforce.phoenix.util.SchemaUtil;
+import com.salesforce.phoenix.exception.SQLExceptionCode;
+import com.salesforce.phoenix.exception.SQLExceptionInfo;
 
 
 /**
@@ -40,16 +41,18 @@ import com.salesforce.phoenix.util.SchemaUtil;
  * @since 0.1
  */
 public class TableAlreadyExistsException extends SQLException {
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
+    private static SQLExceptionCode code = SQLExceptionCode.TABLE_ALREADY_EXIST;
     private final String schemaName;
     private final String tableName;
-    
+
     public TableAlreadyExistsException(String schemaName, String tableName) {
-        super(SchemaUtil.getTableDisplayName(schemaName, tableName) + " already exists");
+        super(new SQLExceptionInfo.Builder(code).setSchemaName(schemaName).setTableName(tableName).build().toString(),
+                code.getSQLState());
         this.tableName = tableName;
         this.schemaName = schemaName;
     }
-    
+
     public String getTableName() {
         return tableName;
     }

@@ -38,6 +38,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.salesforce.phoenix.coprocessor.GroupedAggregateRegionObserver;
 import com.salesforce.phoenix.coprocessor.UngroupedAggregateRegionObserver;
+import com.salesforce.phoenix.exception.SQLExceptionCode;
+import com.salesforce.phoenix.exception.SQLExceptionInfo;
 import com.salesforce.phoenix.expression.*;
 import com.salesforce.phoenix.expression.function.FunctionExpression;
 import com.salesforce.phoenix.parse.*;
@@ -146,7 +148,8 @@ public class GroupByCompiler {
             ParseNode node = groupByNodes.get(i);
             Expression expression = node.accept(groupByVisitor);
             if (groupByVisitor.isAggregate()) {
-                throw new SQLException("Aggregate expressions may not be used in GROUP BY: " + expression);
+                throw new SQLExceptionInfo.Builder(SQLExceptionCode.AGGREGATE_IN_GROUP_BY)
+                    .setMessage(expression.toString()).build().buildException();
             }
             if (! (expression instanceof LiteralExpression) ) { // Filter out top level literals
                 groupByPairs.add(new Pair<Expression,Integer>(expression,groupByVisitor.columnPosition));
@@ -335,7 +338,7 @@ public class GroupByCompiler {
             ColumnRef ref = super.resolveColumn(node);
             // If we encounter any non PK column, then we can't aggregate on-the-fly
             // because the distinct groups have no correlation to the KV column value
-            isRowKeyOrderedGrouping &= SchemaUtil.isPKColumn(ref.getColumn());
+            isRowKeyOrderedGrouping = isRowKeyOrderedGrouping && SchemaUtil.isPKColumn(ref.getColumn());
             if (columnPosition == null) {
                 columnPosition = ref.getColumnPosition();
             } else if (columnPosition != ref.getColumnPosition()) {
